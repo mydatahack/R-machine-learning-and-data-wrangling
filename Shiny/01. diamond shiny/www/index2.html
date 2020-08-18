@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>  
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+      <script type="application/shiny-singletons"></script>  
+      <script type="application/html-dependencies">json2[2014.02.04];jquery[1.11.3];shiny[0.13.2];htmlwidgets[0.8];plotlyjs[1.16.3];plotly-binding[4.5.6];bootstrap[3.3.5]
+      </script>
+      <script src="shared/json2-min.js"></script>
+      <script src="shared/jquery.min.js"></script>
+      <link href="shared/shiny.css" rel="stylesheet" />
+      <script src="shared/shiny.min.js"></script>
+      <link href="shared/selectize/css/selectize.bootstrap3.css" rel="stylesheet" />
+      <script src="shared/selectize/js/selectize.min.js"></script>
+      
+        <script src="plotly/htmlwidgets.js"></script>
+        <link href="plotly/plotly-htmlwidgets.css" rel="stylesheet" />
+        <script src="plotly/plotly-latest.min.js"></script>
+        <script src="plotly/plotly.js"></script>
+       
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- <link href="shared/bootstrap/css/bootstrap.min.css" rel="stylesheet" /> -->
+      <link href="style/bootstrap.css" rel="stylesheet" />
+      <script src="shared/bootstrap/js/bootstrap.min.js"></script>
+      <script src="shared/bootstrap/shim/html5shiv.min.js"></script>
+      <script src="shared/bootstrap/shim/respond.min.js"></script>
+
+      <title>Diamond Price</title>
+</head>
+<body>
+   <!-- Header Image here -->
+   <div class="container">
+    <img src="img/diamond.jpg" alt="Diamond Price Predictor Header Img" style="width: 100%;height:100%;" class="header-img-show">
+    
+   </div>
+   <div class="container" class="header-txt-show">
+        <img src="img/diamond_small.jpg" alt="Diamond Price Predictor Header Img small" style="width: 100%;height:100%;" class="header-txt-show">
+   </div>
+   
+   <!-- Introduction & filter -->
+   <div class="container" style="height:100%;"> 
+       <div class="row">
+           <div class="col-md-6">
+            <h2>Introduction</h2>
+            <h4>Do you have a diamond? Do you want to know how much your diamond is worth?</h4>
+            <h4>Enter carat and choose Cut, Color and Clarity. This will give you the estimated price for your diamond.</h4>
+           </div><!-- End of first column -->
+           <div class="col-md-6">
+            <h2>Your diamond is worth:</h2>
+            <h4><div id="predicted" class="shiny-text-output"></div></h4>
+           </div>
+       </div>
+    </div>
+           
+    <div class="container" style="height:100%;"> 
+        <div class="row">
+            
+        <div class="col-sm-4">
+            <h2>Filters</h2>
+            <form class="well">
+            <div class="form-group shiny-input-container">
+                <label for="carat">Enter Carat</label>
+                <input id="carat" type="number" class="form-control" value="1" min="0.1" max="5" step="0.1"/>
+            </div>
+            <div class="form-group shiny-input-container">
+                <label class="control-label" for="cut">Choose Cut</label>
+                <div>
+                <select id="cut"><option value="Ideal">Ideal</option>
+                        <option value="Premium" selected>Premium</option>
+                        <option value="Very Good">Very Good</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option></select>
+                <script type="application/json" data-for="cut" data-nonempty="">{}</script>
+                </div>
+            </div>
+            <div class="form-group shiny-input-container">
+                <label class="control-label" for="color">Choose Color</label>
+                <div>
+                <select id="color"><option value="J">J</option>
+    <option value="I">I</option>
+    <option value="H" selected>H</option>
+    <option value="G">G</option>
+    <option value="F">F</option>
+    <option value="E">E</option>
+    <option value="D">D</option></select>
+                <script type="application/json" data-for="color" data-nonempty="">{}</script>
+                </div>
+            </div>
+            <div class="form-group shiny-input-container">
+                <label class="control-label" for="clarity">Choose Clarity</label>
+                <div>
+                <select id="clarity"><option value="IF">IF</option>
+    <option value="vvS1">vvS1</option>
+    <option value="vvs2">vvs2</option>
+    <option value="vs1">vs1</option>
+    <option value="vs2">vs2</option>
+    <option value="SI1">SI1</option>
+    <option value="SI2">SI2</option>
+    <option value="I1">I1</option></select>
+                <script type="application/json" data-for="clarity" data-nonempty="">{}</script>
+                </div>
+            </div>
+            </form>
+        </div>
+        <div class="col-sm-6 col-sm-offset-2">
+            
+            <h2>Plot Output</h2>
+            <div id="plot" style="width:100%; height:400px; " class="plotly html-widget html-widget-output"></div>
+        </div>
+        </div>
+     </div>
+
+</body>    
+</html>

@@ -1,0 +1,401 @@
+---
+title: "Identification of Risk Students by clustering (Demo)"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Introduction
+
+As part of retention initiative from Student Success, we would like to identify risk students and run a targeted campaign to increase retention. 
+
+This is the beginning of the exploration on leveraging statistical/machine learning approaches for risk student identification.
+
+For demonstration purpose, we choose students who have taken SAT10006 in 2015 and 2016. The demographic attributes chosen in the initial analysis were used to build the model.
+
+## Key Point Summary
+
+We took an unsupervised learning approach by clustering students to undefined groups and checked their association with pass rate. The clustered groups seemed to have strong association with pass rate. The predictive model was built to fit new students into the clustered groups.
+
+**Workflow & Methods**
+
+(1) Create clusters (k-modes clustering, PAM by Gower Distance)
+(2) Name clusters
+(3) Build predictor for clusters (CART, Random Forest, Neural Network)
+(4) Predict clusters on a new dataset
+
+**Clustering Methods**
+
+We used both PAM by Gower Distance and k-modes clustering. With set.seed(1000), groups clusterd by k-modes clustering with 3 clusters seem to have good association with pass rate. 
+
+**Building predictor**
+
+For the purpose of demonstration, we only relied on off-the-shelf algorithms. Further optimisation is required. 
+
+**Future Actions**
+
+* Explore the cluster characteristics and name them.
+* Review the whole approach (Seek consultation from an expert).
+* Incorporate more attributes.
+* Make models for binary outcome (pass or fail) and predict the indivisual student outcomes without clustering.
+
+## Data Set Summary
+
+**Short Summary**
+
+Data Set was retrieved by SQL. We did a simple dimension reduction and factor attribute transformation before clustering. Chosen attributes and data type information are below.
+
+**Attributes**
+
+```{r df_model, echo=FALSE}
+df <- read.csv('C:/Users/myself/Desktop/R_Analytics/UNI/stats_students.csv')
+
+df <- na.omit(df)# remove na
+
+#Probably better to use payment method for clustering
+#df$CSP_IND <- ifelse(df$PAYMENT_MTHD == 'HECS', 'CSP', 'Open Access')
+df$Unit_Outcome <- as.character(df$Unit_Outcome) # this is necessary to make unit_outcome levels into 2 after removing withdrawn and not yet graded.
+df$ATSI_STATUS <- as.character(df$ATSI_STATUS)
+df$ATSI_STATUS <- ifelse(df$ATSI_STATUS == 'NOTABTSI', 'No', 'Yes')
+df_model <- subset(df, select = c(SP, PAYMENT_MTHD, Unit_Count, IN_TERM_SUB_STATUS, UNI_ENRL_SOURCE_DESCR, SEX, AGE_Range, ATSI_STATUS, Language, SEC_SCHOOL_COMPLETED, HIGHEST_EDUC, DISABILITY, Father_Edu,Mother_Edu, STATE, UNI_PATH_FLG, IRSADdecile, Study_Goal, Unit_Outcome))
+df_model <- subset(df_model, Unit_Outcome %in% c('Failed', 'Passed'))
+
+# Making all the column into factor variables
+
+for (i in 1:dim(df_model)[2]){
+  if(class(df_model[,i]) != 'factor'){
+    df_model[,i] <- as.factor(df_model[,i])
+  }
+}
+
+colnames(df_model)
+```
+
+**Attribute Types and Details**
+
+```{r df_model2, echo=FALSE}
+str(df_model)
+```
+
+## Clustering
+
+K-Modes & PAM with Gower distance clustering methods are used for clustring population according to factor variables. Clustered groups have strong associations with pass rates. 
+
+**(1) K-Modes Clustering by the klaR package**
+
+* 3 clusters
+
+```{r kmodes_clustering_3, echo=FALSE, message=FALSE}
+library(klaR)
+set.seed(1000)
+cluster <- kmodes(df_model[, -22], 3, iter.max=10, weighted=F)
+df_model$clust <- as.factor(cluster$cluster)
+
+table(df_model$Unit_Outcome, df_model$clust)
+
+matrix <- as.matrix(table(df_model$Unit_Outcome, df_model$clust))
+Cluster1 <- round(matrix[2]/(matrix[1] + matrix[2]), 2)
+Cluster2 <- round(matrix[4]/(matrix[3] + matrix[4]), 2)
+Cluster3 <- round(matrix[6]/(matrix[5] + matrix[6]), 2)
+print(paste("Cluster 1 Pass Rate: ", Cluster1))
+print(paste("Cluster 2 Pass Rate: ", Cluster2))
+print(paste("Cluster 3 Pass Rate: ", Cluster3))
+```
+
+* 4 clusters
+
+```{r kmodes_clustering_4, echo=FALSE, message=FALSE}
+library(klaR)
+set.seed(1000)
+cluster <- kmodes(df_model[, -22], 4, iter.max=10, weighted=F)
+df_model$clust <- as.factor(cluster$cluster)
+
+table(df_model$Unit_Outcome, df_model$clust)
+
+matrix <- as.matrix(table(df_model$Unit_Outcome, df_model$clust))
+Cluster1 <- round(matrix[2]/(matrix[1] + matrix[2]), 2)
+Cluster2 <- round(matrix[4]/(matrix[3] + matrix[4]), 2)
+Cluster3 <- round(matrix[6]/(matrix[5] + matrix[6]), 2)
+Cluster4 <- round(matrix[8]/(matrix[7] + matrix[8]), 2)
+print(paste("Cluster 1 Pass Rate: ", Cluster1))
+print(paste("Cluster 2 Pass Rate: ", Cluster2))
+print(paste("Cluster 3 Pass Rate: ", Cluster3))
+print(paste("Cluster 4 Pass Rate: ", Cluster4))
+```
+
+**(2) PAM by Gower Distance by the cluster package**
+
+* 3 clusters
+
+```{r pam_clustering_3, echo=FALSE, message=FALSE}
+library(cluster)
+set.seed(1000)
+# Dissimilarity matrix calculation
+
+daisy.mat <- as.matrix(daisy(df_model[, -22], metric="gower"))
+
+# Clustering by pam algorithm
+
+my.cluster <- pam(daisy.mat, k=3, diss = T)
+df_model$clust <- as.factor(my.cluster$clustering)
+
+table(df_model$Unit_Outcome, df_model$clust)
+
+matrix <- as.matrix(table(df_model$Unit_Outcome, df_model$clust))
+
+Cluster1 <- round(matrix[2]/(matrix[1] + matrix[2]), 2)
+Cluster2 <- round(matrix[4]/(matrix[3] + matrix[4]), 2)
+Cluster3 <- round(matrix[6]/(matrix[5] + matrix[6]), 2)
+print(paste("Cluster 1 Pass Rate: ", Cluster1))
+print(paste("Cluster 2 Pass Rate: ", Cluster2))
+print(paste("Cluster 3 Pass Rate: ", Cluster3))
+```
+
+* 4 clusters
+
+```{r pam_clustering_4, echo=FALSE, message=FALSE}
+library(cluster)
+set.seed(1000)
+# Dissimilarity matrix calculation
+
+daisy.mat <- as.matrix(daisy(df_model[, -22], metric="gower"))
+
+# Clustering by pam algorithm
+
+my.cluster <- pam(daisy.mat, k=4, diss = T)
+df_model$clust <- as.factor(my.cluster$clustering)
+
+table(df_model$Unit_Outcome, df_model$clust)
+matrix <- as.matrix(table(df_model$Unit_Outcome, df_model$clust))
+Cluster1 <- round(matrix[2]/(matrix[1] + matrix[2]), 2)
+Cluster2 <- round(matrix[4]/(matrix[3] + matrix[4]), 2)
+Cluster3 <- round(matrix[6]/(matrix[5] + matrix[6]), 2)
+Cluster4 <- round(matrix[8]/(matrix[7] + matrix[8]), 2)
+print(paste("Cluster 1 Pass Rate: ", Cluster1))
+print(paste("Cluster 2 Pass Rate: ", Cluster2))
+print(paste("Cluster 3 Pass Rate: ", Cluster3))
+print(paste("Cluster 4 Pass Rate: ", Cluster4))
+```
+
+# Predicting Clusters
+
+For the demonstration purpose, we used k-modes clustring with 3 cluster numbers. The outcome from k-modes clustering seems to have better association with pass rate. However, no validation was performed. 
+
+The data set was split into training set (70%) and testing set (30%). Training set was used to build a model and testing set was used to get the model prediction accuracy. 
+
+```{r prep, echo=FALSE, include=FALSE}
+
+# this section has no output. It is used to split the data for modeling & predicting.
+
+# Using PAM with Gower Distance
+# daisy.mat <- as.matrix(daisy(df_model[, -22], metric="gower"))
+# my.cluster <- pam(daisy.mat, k=3, diss = T)
+# df_model$clust <- as.factor(my.cluster$clustering)
+
+# k-modes clustering seems to have better association with pass rate. 
+library(klaR)
+set.seed(1000)
+cluster <- kmodes(df_model[, -22], 3, iter.max=10, weighted=F)
+df_model$clust <- as.factor(cluster$cluster)
+
+library(caret)
+set.seed(1000)
+df_prep <- subset(df_model, select = -c(Unit_Outcome))
+inTrain <- createDataPartition(df_prep$clust, p=0.7, list=F)
+training <- df_prep[inTrain,]
+testing <- df_prep[-inTrain,]
+```
+
+**(1) CART Model**
+
+```{r cart, echo=FALSE, message=FALSE}
+library(rpart)
+model <- rpart(clust ~., data = training)
+
+# for training dataset validation
+pred_train <- predict(model, newdata=training, type="class")
+table(pred_train, training$clust)
+matrix <- as.matrix(table(pred_train,training$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(training),2)
+
+print(paste("Training set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_train, training$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+# prediction on testing dataset
+pred_test <- predict(model, newdata=testing, type="class")
+table(pred_test, testing$clust)
+
+matrix <- as.matrix(table(pred_test,testing$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(testing),2)
+
+print(paste("Testing set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_test, testing$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+```
+
+Decision Tree Plot
+
+```{r rpartplot, echo=FALSE, message=FALSE}
+library(rpart.plot)
+rpart.plot(model)
+
+```
+
+**(2) Neural Network Model**
+```{r nnet, echo=FALSE, message=FALSE}
+
+# Create dummyVars first
+df_prep <- subset(df_model, select = -c(clust, Unit_Outcome))
+dmy <- dummyVars("~.", data=df_prep)
+trsf <- data.frame(predict(dmy, newdata=df_prep))
+df_nnet_prep <- cbind(trsf, clust=df_model$clust)
+
+inTrain <- createDataPartition(df_nnet_prep$clust, p=0.7, list=F)
+train <- df_nnet_prep[inTrain, ]
+test <- df_nnet_prep[-inTrain, ]
+
+library(nnet)
+model <- nnet(clust ~., train, size=4)
+
+# for training dataset validation
+pred_train <- predict(model, data=train, type="class")
+table(train$clust, pred_train)
+
+matrix <- as.matrix(table(pred_train,train$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(train),2)
+
+print(paste("Training set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_train, train$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+
+# prediction on testing dataset
+pred_test <- predict(model, newdata=test, type="class")
+table(test$clust, pred_test)
+
+
+matrix <- as.matrix(table(pred_test,test$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(test),2)
+
+print(paste("Training set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_test, test$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+```
+
+Neural Network plot
+
+```{r netplot, echo=FALSE, message=FALSE}
+library(NeuralNetTools)
+plotnet(model)
+
+```
+
+**(3) Random Forest**
+
+```{r rf, echo=FALSE, message=FALSE}
+
+library(randomForest)
+rfmodel <- randomForest(clust ~., data=training, nodesize=10, ntree=200)
+
+# for training dataset validation
+pred_train <- predict(rfmodel, data=training)
+table(training$clust, pred_train)
+
+matrix <- as.matrix(table(pred_train,training$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(training),2)
+
+print(paste("Training set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_train, training$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+
+# prediction on testing dataset
+pred_test <- predict(rfmodel, newdata=testing)
+table(pred_test, testing$clust)
+
+matrix <- as.matrix(table(pred_test,testing$clust))
+accuracy <- round((matrix[1] + matrix[5] + matrix[9])/nrow(testing),2)
+
+print(paste("Testing set prediction accuracy: ", accuracy))
+
+x <- confusionMatrix(pred_test, testing$clust)
+as.matrix(subset(as.data.frame(x$byClass), select = c(Sensitivity, Specificity)))
+
+```
+
+Random Forest trees vs error
+
+```{r rfplot1, echo=FALSE, message=FALSE}
+plot(rfmodel, main="trees vs error rate")
+
+```
+
+Random Forest Plot with varImpPlot
+
+```{r rfplot2, echo=FALSE, message=FALSE}
+varImpPlot(rfmodel, main="Attribute Importance")
+
+```
+Random Forest Plot with varImpPlot
+
+```{r rfplot3, echo=FALSE, message=FALSE}
+rfmodel2 <- randomForest(clust ~., data=training, nodesize=10, ntree=200, proximity=TRUE)
+MDSplot(rfmodel2, training$clust)
+
+```
+
+## Appendix
+
+**Learning**
+
+(1) C5.0 does not work. This might be because it only supports binary classification. Not confirmed yet.
+(2) Cannot draw ROC curve. ROCR currently supports only evaluation of binary classification tasks.
+(3) caret() package is not as good as I thought. It sometimes gives strage results compared to native functions. 
+
+```{r C5.0, echo=FALSE, message=FALSE, include=FALSE}
+
+# library(C50)
+
+# c50model <- C5.0(clust ~., data=training)
+
+# for training dataset validation
+# pred_train <- predict(c50model, training)
+# table(training$clust, pred_train)
+
+
+
+```
+
+## Further Update
+
+**Made count and proportion tables to characterise cluster**
+
+```{r update, echo=FALSE, message=FALSE}
+library(klaR)
+set.seed(1000)
+cluster <- kmodes(df_model[, -22], 3, iter.max=10, weighted=F)
+df_model$clust <- as.factor(cluster$cluster)
+
+for (i in 1:length(colnames(df_model))){
+  print(paste(colnames(df_model)[i], "count of records against clusters"))
+  table <- as.table(table(df_model$clust, df_model[, i]))
+  print(table)
+  
+  print(paste(colnames(df_model)[i], "within cluster proportion of records against clusters"))
+  prop <- round(prop.table(table, 1), 2)
+  print(prop)
+}
+
+```
